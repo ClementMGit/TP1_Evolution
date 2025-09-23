@@ -1,9 +1,7 @@
+package Partie1;
+
 import spoon.Launcher;
 import spoon.reflect.CtModel;
-import visitors.ClassVisitor;
-import visitors.FieldVisitor;
-import visitors.InvocationVisitor;
-import visitors.MethodVisitor;
 
 public class Main {
     public static void main(String[] args) {

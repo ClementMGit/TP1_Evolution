@@ -1,9 +1,9 @@
-package visitors;
+package Partie1;
 
+import spoon.reflect.code.*;
+import spoon.reflect.declaration.*;
 import spoon.reflect.reference.*;
 import spoon.reflect.visitor.CtVisitor;
-import spoon.reflect.declaration.*;
-import spoon.reflect.code.*;
 
 import java.lang.annotation.Annotation;
 
@@ -467,6 +467,4 @@ public abstract class AbstractCtVisitor implements CtVisitor {
     public void visitCtReceiverParameter(CtReceiverParameter ctReceiverParameter) {
 
     }
-
-    // … et tu rajoutes les autres vides si nécessaire
 }

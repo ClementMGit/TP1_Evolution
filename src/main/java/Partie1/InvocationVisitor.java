@@ -3,7 +3,6 @@ package Partie1;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.code.CtInvocation;
-import Partie2.AbstractCtVisitor;
 
 public class InvocationVisitor extends AbstractCtVisitor {
 

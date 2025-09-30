@@ -2,7 +2,6 @@ package Partie1;
 
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtField;
-import Partie2.AbstractCtVisitor;
 
 public class FieldVisitor extends AbstractCtVisitor {
 

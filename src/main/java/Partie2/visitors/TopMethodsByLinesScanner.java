@@ -1,18 +1,20 @@
-package Partie2;
+package Partie2.visitors;
 
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.visitor.CtScanner;
 
-public class AverageLinesPerMethodVisitor extends AbstractCtVisitor {
-    private int totalMethods = 0;
-    private int totalLines = 0;
+import java.util.HashMap;
+import java.util.Map;
 
+public class TopMethodsByLinesScanner extends CtScanner {
+
+    private final Map<CtMethod<?>, Integer> methodLineCount = new HashMap<>();
 
     @Override
     public <T> void visitCtClass(CtClass<T> ctClass) {
         for (CtMethod<?> method : ctClass.getMethods()) {
-            totalMethods++;
             int minLine = Integer.MAX_VALUE;
             int maxLine = Integer.MIN_VALUE;
 
@@ -24,24 +26,16 @@ public class AverageLinesPerMethodVisitor extends AbstractCtVisitor {
             }
 
             if (minLine != Integer.MAX_VALUE && maxLine != Integer.MIN_VALUE) {
-                totalLines += (maxLine - minLine + 1);
+                int lines = maxLine - minLine + 1;
+                methodLineCount.put(method, lines);
+            } else {
+                methodLineCount.put(method, 0);
             }
         }
+        super.visitCtClass(ctClass);
     }
 
-    public int getTotalMethods() {
-        return totalMethods;
-    }
-
-    public void setTotalMethods(int totalMethods) {
-        this.totalMethods = totalMethods;
-    }
-
-    public int getTotalLines() {
-        return totalLines;
-    }
-
-    public void setTotalLines(int totalLines) {
-        this.totalLines = totalLines;
+    public Map<CtMethod<?>, Integer> getMethodLineCount() {
+        return methodLineCount;
     }
 }

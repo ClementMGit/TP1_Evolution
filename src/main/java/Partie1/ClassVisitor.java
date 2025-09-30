@@ -1,7 +1,6 @@
 package Partie1;
 
 import spoon.reflect.declaration.CtClass;
-import Partie2.AbstractCtVisitor;
 
 public class ClassVisitor extends AbstractCtVisitor {
 

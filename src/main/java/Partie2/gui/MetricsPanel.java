@@ -21,7 +21,9 @@ public class MetricsPanel extends JPanel {
     private JTextField xInputField;
     private JButton recalcXButton, chooseFolderButton, analyzeButton;
     private File selectedFolder;
-    private CtModel model;
+    private static CtModel model;
+
+
 
     public MetricsPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -126,7 +128,6 @@ public class MetricsPanel extends JPanel {
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         add(scrollPane, BorderLayout.CENTER);
-
         // --- Actions ---
         chooseFolderButton.addActionListener(e -> chooseFolder());
         analyzeButton.addActionListener(e -> analyzeProject());
@@ -175,6 +176,9 @@ public class MetricsPanel extends JPanel {
         launcher.addInputResource(selectedFolder.getAbsolutePath());
         launcher.buildModel();
         model = launcher.getModel();
+        // Après avoir construit le model...
+        GraphPanel graphPanel = (GraphPanel) ((JTabbedPane) getParent()).getComponentAt(1);
+        graphPanel.displayCallGraph(model);
 
         // Statistiques globales
         linesLabel.setText(String.valueOf(new LineCountProcessor().computeTotalLines(model)));

@@ -20,10 +20,9 @@ public class MetricsPanel extends JPanel {
     private JLabel xMethodsLabel, topLongMethodsLabel, maxParamsLabel;
     private JTextField xInputField;
     private JButton recalcXButton, chooseFolderButton, analyzeButton;
+    private JButton showCouplingButton;
     private File selectedFolder;
     private static CtModel model;
-
-
 
     public MetricsPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -32,10 +31,27 @@ public class MetricsPanel extends JPanel {
         // --- Barre du haut ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         chooseFolderButton = new JButton("Choisir un dossier");
+        showCouplingButton = new JButton("Graphe de couplage");
         analyzeButton = new JButton("Analyser le projet");
+
         topPanel.add(chooseFolderButton);
         topPanel.add(analyzeButton);
+        topPanel.add(showCouplingButton);
+
         add(topPanel, BorderLayout.NORTH);
+
+        // --- Actions des boutons ---
+        showCouplingButton.addActionListener(e -> {
+            if (model != null) {
+                CouplingGraphWindow.showGraph(model);
+            } else {
+                JOptionPane.showMessageDialog(this, "Veuillez d'abord analyser un projet.");
+            }
+        });
+
+
+        chooseFolderButton.addActionListener(e -> chooseFolder());
+        analyzeButton.addActionListener(e -> analyzeProject());
 
         // --- Panneau principal ---
         JPanel infoPanel = new JPanel(new GridBagLayout());
@@ -72,6 +88,7 @@ public class MetricsPanel extends JPanel {
         xInputField = new JTextField("2", 4);
         JLabel methodsSuffix = new JLabel(" méthodes : ");
         recalcXButton = new JButton("Recalculer");
+        recalcXButton.addActionListener(e -> recalcWithNewX());
         xMethodsLabel = new JLabel("<html>–</html>");
         xMethodsLabel.setVerticalAlignment(SwingConstants.TOP);
         xMethodsLabel.setFont(labelFont);
@@ -114,12 +131,11 @@ public class MetricsPanel extends JPanel {
         topLongScroll.getVerticalScrollBar().setUnitIncrement(16);
         topLongScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         topLongScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        topLongScroll.getViewport().setViewPosition(new Point(0,0));
+        topLongScroll.getViewport().setViewPosition(new Point(0, 0));
 
         gbc.gridx = 0;
         gbc.gridy = row++;
         gbc.gridwidth = 2;
-
         infoPanel.add(topLongScroll, gbc);
 
         // --- Encapsuler infoPanel dans JScrollPane principal ---
@@ -128,10 +144,6 @@ public class MetricsPanel extends JPanel {
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         add(scrollPane, BorderLayout.CENTER);
-        // --- Actions ---
-        chooseFolderButton.addActionListener(e -> chooseFolder());
-        analyzeButton.addActionListener(e -> analyzeProject());
-        recalcXButton.addActionListener(e -> recalcWithNewX());
     }
 
     private void addLabel(JPanel panel, GridBagConstraints gbc, int row, String title, JLabel label, Font font) {
@@ -167,7 +179,7 @@ public class MetricsPanel extends JPanel {
     }
 
     private void analyzeProject() {
-        String path ="/home/clementwt/Cours/M1/backup/ArchiTP3-main";
+        String path = "/home/clementwt/Cours/M1/backup/ArchiTP3-main";
 //        if (selectedFolder == null) {
 //            JOptionPane.showMessageDialog(this, "Veuillez d'abord choisir un dossier de projet.");
 //            return;
@@ -182,9 +194,6 @@ public class MetricsPanel extends JPanel {
         GraphPanel graphPanel = (GraphPanel) ((JTabbedPane) getParent()).getComponentAt(1);
         graphPanel.displayCallGraph(model);
 
-        // --- Graphe de couplage ---
-        CouplingPanel couplingPanel = (CouplingPanel) ((JTabbedPane) getParent()).getComponentAt(2);
-        couplingPanel.displayCouplingGraph(model);
 
         // --- Statistiques diverses ---
         linesLabel.setText(String.valueOf(new LineCountProcessor().computeTotalLines(model)));
@@ -214,7 +223,6 @@ public class MetricsPanel extends JPanel {
                 .computeTop10PercentMethodsByLines(model);
         topLongMethodsLabel.setText(formatTopMethods(topLines));
     }
-
 
     private void recalcWithNewX() {
         if (model == null) {
@@ -255,14 +263,10 @@ public class MetricsPanel extends JPanel {
     private String formatTopMethods(Map<CtClass<?>, List<CtMethod<?>>> map) {
         if (map.isEmpty()) return "<html>Aucune</html>";
         StringBuilder sb = new StringBuilder("<html>");
-
-        // Label unique en haut
         sb.append("<b>Plus grand nombre de lignes de code (par classe) :</b><br>");
-
         for (Map.Entry<CtClass<?>, List<CtMethod<?>>> entry : map.entrySet()) {
             CtClass<?> ctClass = entry.getKey();
             List<CtMethod<?>> methods = entry.getValue();
-
             sb.append("<b>").append(ctClass.getSimpleName()).append("</b><br>");
             for (CtMethod<?> m : methods) {
                 int lines = (m.getBody() != null) ? m.getBody().getStatements().size() : 0;
@@ -273,6 +277,4 @@ public class MetricsPanel extends JPanel {
         sb.append("</html>");
         return sb.toString();
     }
-
-
 }

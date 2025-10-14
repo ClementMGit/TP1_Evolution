@@ -167,37 +167,39 @@ public class MetricsPanel extends JPanel {
     }
 
     private void analyzeProject() {
-        if (selectedFolder == null) {
-            JOptionPane.showMessageDialog(this, "Veuillez d'abord choisir un dossier de projet.");
-            return;
-        }
+        String path ="/home/clementwt/Cours/M1/backup/ArchiTP3-main";
+//        if (selectedFolder == null) {
+//            JOptionPane.showMessageDialog(this, "Veuillez d'abord choisir un dossier de projet.");
+//            return;
+//        }
 
         Launcher launcher = new Launcher();
-        launcher.addInputResource(selectedFolder.getAbsolutePath());
+        launcher.addInputResource(path);
         launcher.buildModel();
         model = launcher.getModel();
-        // Après avoir construit le model...
+
+        // --- Graphe d'appels ---
         GraphPanel graphPanel = (GraphPanel) ((JTabbedPane) getParent()).getComponentAt(1);
         graphPanel.displayCallGraph(model);
 
-        // Statistiques globales
+        // --- Graphe de couplage ---
+        CouplingPanel couplingPanel = (CouplingPanel) ((JTabbedPane) getParent()).getComponentAt(2);
+        couplingPanel.displayCouplingGraph(model);
+
+        // --- Statistiques diverses ---
         linesLabel.setText(String.valueOf(new LineCountProcessor().computeTotalLines(model)));
         classesLabel.setText(String.valueOf(new ClassCountProcessor().computeClassCount(model)));
         methodsLabel.setText(String.valueOf(new MethodCountProcessor().computeTotalMethods(model)));
         packagesLabel.setText(String.valueOf(new PackageCountProcessor().computePackageCount(model)));
 
-        // Moyennes
         avgAttributesLabel.setText(String.format("%.2f", new AverageAttributesPerClassProcessor().computeAverageAttributesPerClass(model)));
         avgMethodsLabel.setText(String.format("%.2f", new AverageMethodsPerClassProcessor().computeAverageMethodsPerClass(model)));
         avgLinesLabel.setText(String.format("%.2f", new AverageLinesPerMethodProcessor().computeAverageLinesPerMethod(model)));
 
-        // Max paramètres
         maxParamsLabel.setText(String.valueOf(new MaxParametersProcessor().computeMaxParameters(model)));
 
-        // + de X méthodes
         recalcWithNewX();
 
-        // Top 10%
         Map<CtClass<?>, Integer> topAttr = new TopAttributeClassesProcessor().computeTop10PercentMap(model);
         topAttributesLabel.setText(formatList(topAttr, "attributs"));
 
@@ -212,6 +214,7 @@ public class MetricsPanel extends JPanel {
                 .computeTop10PercentMethodsByLines(model);
         topLongMethodsLabel.setText(formatTopMethods(topLines));
     }
+
 
     private void recalcWithNewX() {
         if (model == null) {

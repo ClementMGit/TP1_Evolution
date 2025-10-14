@@ -20,6 +20,7 @@ public class MainFrame extends JFrame {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Métriques", new MetricsPanel());
         tabbedPane.addTab("Graphe d'appel", new GraphPanel());
+        tabbedPane.addTab("Couplage", new CouplingPanel());
 
         add(tabbedPane, BorderLayout.CENTER);
     }

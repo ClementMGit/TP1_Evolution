@@ -17,7 +17,7 @@ public class CouplingProcessor {
 
     /**
      * Calcule la matrice de couplage normalisée entre toutes les classes du projet.
-     * @return Map<String, Double> où la clé est "ClasseA↔ClasseB" et la valeur est le couplage normalisé
+     * Les clés incluent le nom complet de chaque classe ("pkg.ClassA↔pkg.ClassB").
      */
     public Map<String, Double> computeNormalizedCoupling() {
         CouplingVisitor visitor = new CouplingVisitor();
@@ -38,7 +38,11 @@ public class CouplingProcessor {
                 int calls = calleeEntry.getValue();
                 double normalized = (double) calls / totalCalls;
 
-                String key = caller.getSimpleName() + "↔" + callee.getSimpleName();
+                // 🔹 On garde le nom complet pour distinguer les classes d’un même nom
+                String callerName = caller.getQualifiedName();
+                String calleeName = callee.getQualifiedName();
+                String key = callerName + "↔" + calleeName;
+
                 normalizedCoupling.put(key, normalized);
             }
         }

@@ -13,11 +13,10 @@ public class CoupledModulesIdentifier {
 
     private final CtModel model;
     private final double CP; // seuil de couplage minimum
-    private final int maxModules; // M/2
 
     public static class ClusterNode {
-        public final String name;
-        public final Set<String> classes;
+        public final String name; // nom du cluster ou de la classe
+        public final Set<String> classes; // noms complets
         public final List<ClusterNode> children;
         public final double coupling;
 
@@ -36,21 +35,20 @@ public class CoupledModulesIdentifier {
     public CoupledModulesIdentifier(CtModel model, double CP) {
         this.model = model;
         this.CP = CP;
-        int M = model.getAllTypes().size();
-        this.maxModules = Math.max(1, M / 2);
     }
 
     /**
-     * Construit le dendrogramme multi-branches.
+     * Construit le dendrogramme multi-branches à partir des noms complets.
      */
     public ClusterNode buildDendrogram() {
         CouplingProcessor processor = new CouplingProcessor(model);
         Map<String, Double> couplingMap = processor.computeNormalizedCoupling();
 
-        // Initialiser chaque classe comme une feuille
+        // Initialiser chaque classe comme une feuille avec nom complet
         List<ClusterNode> clusters = model.getAllTypes().stream()
-                .map(t -> new ClusterNode(t.getSimpleName(),
-                        new HashSet<>(Collections.singletonList(t.getSimpleName())),
+                .map(CtType::getQualifiedName)
+                .map(name -> new ClusterNode(name,
+                        new HashSet<>(Collections.singletonList(name)),
                         Collections.emptyList(),
                         1.0))
                 .collect(Collectors.toList());
@@ -60,9 +58,8 @@ public class CoupledModulesIdentifier {
 
         do {
             mergedAny = false;
-
-            // Calculer toutes les paires de clusters avec couplage ≥ CP
             List<int[]> toMerge = new ArrayList<>();
+
             for (int i = 0; i < clusters.size(); i++) {
                 for (int j = i + 1; j < clusters.size(); j++) {
                     double cpl = computeAverageCoupling(clusters.get(i).classes, clusters.get(j).classes, couplingMap);
@@ -74,15 +71,11 @@ public class CoupledModulesIdentifier {
 
             if (!toMerge.isEmpty()) {
                 mergedAny = true;
-
-                // Fusionner toutes les paires trouvées en un seul cluster multi-enfants
                 Set<Integer> mergedIndices = new HashSet<>();
                 List<ClusterNode> newClusters = new ArrayList<>();
 
                 for (int[] pair : toMerge) {
-                    int i = pair[0];
-                    int j = pair[1];
-
+                    int i = pair[0], j = pair[1];
                     if (mergedIndices.contains(i) || mergedIndices.contains(j)) continue;
 
                     ClusterNode c1 = clusters.get(i);
@@ -91,8 +84,8 @@ public class CoupledModulesIdentifier {
                     Set<String> mergedClasses = new HashSet<>(c1.classes);
                     mergedClasses.addAll(c2.classes);
                     List<ClusterNode> children = new ArrayList<>();
-                    if (!c1.isLeaf() || c1.classes.size() > 0) children.add(c1);
-                    if (!c2.isLeaf() || c2.classes.size() > 0) children.add(c2);
+                    if (!c1.isLeaf() || !c1.classes.isEmpty()) children.add(c1);
+                    if (!c2.isLeaf() || !c2.classes.isEmpty()) children.add(c2);
 
                     double avgCoupling = computeAverageCoupling(mergedClasses, mergedClasses, couplingMap);
 
@@ -114,7 +107,7 @@ public class CoupledModulesIdentifier {
 
         } while (mergedAny && clusters.size() > 1);
 
-        // Retourner le dendrogramme complet : s’il reste plusieurs clusters, on crée un noeud racine neutre
+        // Si plusieurs clusters restants, créer une racine neutre
         if (clusters.size() == 1) return clusters.get(0);
 
         Set<String> allClasses = clusters.stream()
@@ -123,27 +116,6 @@ public class CoupledModulesIdentifier {
 
         return new ClusterNode("Root", allClasses, clusters, 0.0);
     }
-
-    /**
-     * Modules forts uniquement
-     */
-    public List<ClusterNode> extractStrongModules(ClusterNode root) {
-        if (root == null) return Collections.emptyList();
-        List<ClusterNode> result = new ArrayList<>();
-
-        if (root.isLeaf()) return result;
-
-        if (root.coupling >= CP && root.classes.size() > 1) {
-            result.add(root);
-        } else if (root.children != null) {
-            for (ClusterNode child : root.children) {
-                result.addAll(extractStrongModules(child));
-            }
-        }
-        return result;
-    }
-
-    // --- utilitaires ---
     private double computeAverageCoupling(Set<String> c1, Set<String> c2, Map<String, Double> map) {
         double sum = 0;
         int count = 0;

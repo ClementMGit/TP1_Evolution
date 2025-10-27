@@ -20,9 +20,13 @@ public class MetricsPanel extends JPanel {
     private JLabel xMethodsLabel, topLongMethodsLabel, maxParamsLabel;
     private JTextField xInputField;
     private JButton recalcXButton, chooseFolderButton, analyzeButton;
-    private JButton showCouplingButton;
+    private JButton showCouplingButton, showModulesButton;
     private File selectedFolder;
     private static CtModel model;
+
+    // Références vers les autres onglets
+    private GraphPanel graphPanel;
+    private ModuleGraphPanel moduleGraphPanel;
 
     public MetricsPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -31,16 +35,21 @@ public class MetricsPanel extends JPanel {
         // --- Barre du haut ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         chooseFolderButton = new JButton("Choisir un dossier");
-        showCouplingButton = new JButton("Graphe de couplage");
         analyzeButton = new JButton("Analyser le projet");
+        showCouplingButton = new JButton("Graphe de couplage");
+        showModulesButton = new JButton("Modules couplés");
 
         topPanel.add(chooseFolderButton);
         topPanel.add(analyzeButton);
         topPanel.add(showCouplingButton);
+        topPanel.add(showModulesButton);
 
         add(topPanel, BorderLayout.NORTH);
 
         // --- Actions des boutons ---
+        chooseFolderButton.addActionListener(e -> chooseFolder());
+        analyzeButton.addActionListener(e -> analyzeProject());
+
         showCouplingButton.addActionListener(e -> {
             if (model != null) {
                 CouplingGraphWindow.showGraph(model);
@@ -49,9 +58,27 @@ public class MetricsPanel extends JPanel {
             }
         });
 
-
-        chooseFolderButton.addActionListener(e -> chooseFolder());
-        analyzeButton.addActionListener(e -> analyzeProject());
+        showModulesButton.addActionListener(e -> {
+            if (model != null) {
+                String cpStr = JOptionPane.showInputDialog(this,
+                        "Seuil de couplage CP (entre 0 et 1) :", "0.2");
+                try {
+                    double cp = Double.parseDouble(cpStr);
+                    if (moduleGraphPanel != null) {
+                        moduleGraphPanel.displayModulesGraph(model, cp);
+                        // Bascule automatique sur l’onglet “Modules couplés”
+                        JTabbedPane parentTabs = (JTabbedPane) getParent();
+                        parentTabs.setSelectedComponent(moduleGraphPanel);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Le panneau des modules n'est pas initialisé.");
+                    }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Valeur de CP invalide.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Veuillez d'abord analyser un projet.");
+            }
+        });
 
         // --- Panneau principal ---
         JPanel infoPanel = new JPanel(new GridBagLayout());
@@ -97,11 +124,6 @@ public class MetricsPanel extends JPanel {
         xScroll.setBorder(null);
         xScroll.setPreferredSize(new Dimension(500, 200));
 
-        xTextLabel.setFont(labelFont);
-        xInputField.setFont(labelFont);
-        methodsSuffix.setFont(labelFont);
-        xMethodsLabel.setFont(labelFont);
-
         xPanel.add(xTextLabel);
         xPanel.add(xInputField);
         xPanel.add(methodsSuffix);
@@ -120,7 +142,7 @@ public class MetricsPanel extends JPanel {
         addLabel(infoPanel, gbc, row++, "Classes avec plus de méthodes :", topMethodsLabel = new JLabel("–"), labelFont);
         addLabel(infoPanel, gbc, row++, "Présentes dans les deux catégories :", intersectionLabel = new JLabel("–"), labelFont);
 
-        // Top méthodes longues encapsulé dans un JScrollPane pour alignement en haut
+        // --- Top méthodes longues ---
         topLongMethodsLabel = new JLabel("Plus grand nombre de lignes de code (par classe) :");
         topLongMethodsLabel.setVerticalAlignment(SwingConstants.TOP);
         topLongMethodsLabel.setFont(labelFont);
@@ -129,16 +151,12 @@ public class MetricsPanel extends JPanel {
         topLongScroll.setBorder(null);
         topLongScroll.setPreferredSize(new Dimension(500, 200));
         topLongScroll.getVerticalScrollBar().setUnitIncrement(16);
-        topLongScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        topLongScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        topLongScroll.getViewport().setViewPosition(new Point(0, 0));
 
         gbc.gridx = 0;
         gbc.gridy = row++;
         gbc.gridwidth = 2;
         infoPanel.add(topLongScroll, gbc);
 
-        // --- Encapsuler infoPanel dans JScrollPane principal ---
         JScrollPane scrollPane = new JScrollPane(infoPanel,
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -146,27 +164,13 @@ public class MetricsPanel extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
     }
 
-    private void addLabel(JPanel panel, GridBagConstraints gbc, int row, String title, JLabel label, Font font) {
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 1;
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(font);
-        panel.add(titleLabel, gbc);
+    // ======================
+    // === Méthodes utilitaires
+    // ======================
 
-        gbc.gridx = 1;
-        label.setFont(font);
-        panel.add(label, gbc);
-    }
-
-    private void addSectionTitle(JPanel panel, GridBagConstraints gbc, int row, String title) {
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 2;
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-        titleLabel.setForeground(new Color(40, 70, 120));
-        panel.add(titleLabel, gbc);
+    public void setGraphPanels(GraphPanel graphPanel, ModuleGraphPanel moduleGraphPanel) {
+        this.graphPanel = graphPanel;
+        this.moduleGraphPanel = moduleGraphPanel;
     }
 
     private void chooseFolder() {
@@ -179,21 +183,17 @@ public class MetricsPanel extends JPanel {
     }
 
     private void analyzeProject() {
-        String path = "/home/clementwt/Cours/M1/backup/ArchiTP3-main";
-//        if (selectedFolder == null) {
-//            JOptionPane.showMessageDialog(this, "Veuillez d'abord choisir un dossier de projet.");
-//            return;
-//        }
+        String path = (selectedFolder != null)
+                ? selectedFolder.getAbsolutePath()
+                : "/home/clementwt/Cours/M1/backup/ArchiTP3-main";
 
         Launcher launcher = new Launcher();
         launcher.addInputResource(path);
         launcher.buildModel();
         model = launcher.getModel();
 
-        // --- Graphe d'appels ---
-        GraphPanel graphPanel = (GraphPanel) ((JTabbedPane) getParent()).getComponentAt(1);
-        graphPanel.displayCallGraph(model);
-
+        if (graphPanel != null)
+            graphPanel.displayCallGraph(model);
 
         // --- Statistiques diverses ---
         linesLabel.setText(String.valueOf(new LineCountProcessor().computeTotalLines(model)));
@@ -237,6 +237,29 @@ public class MetricsPanel extends JPanel {
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Veuillez entrer un nombre valide pour X.");
         }
+    }
+
+    private void addLabel(JPanel panel, GridBagConstraints gbc, int row, String title, JLabel label, Font font) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(font);
+        panel.add(titleLabel, gbc);
+
+        gbc.gridx = 1;
+        label.setFont(font);
+        panel.add(label, gbc);
+    }
+
+    private void addSectionTitle(JPanel panel, GridBagConstraints gbc, int row, String title) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        titleLabel.setForeground(new Color(40, 70, 120));
+        panel.add(titleLabel, gbc);
     }
 
     private String formatList(Map<CtClass<?>, Integer> map, String unit) {

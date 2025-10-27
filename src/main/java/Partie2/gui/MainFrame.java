@@ -5,22 +5,30 @@ import java.awt.*;
 
 public class MainFrame extends JFrame {
 
+    private MetricsPanel metricsPanel;
+    private GraphPanel callGraphPanel;
+    private ModuleGraphPanel moduleGraphPanel;
+
     public MainFrame() {
         setTitle("Analyse de projet Java - Spoon Metrics");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        // Plein écran fenêtré
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setUndecorated(false); // garde la barre de titre et les boutons
         setResizable(true);
 
-        // Si tu veux que ça prenne vraiment tout l'écran (y compris barre de tâches) :
-        // GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().setFullScreenWindow(this);
-
+        // Onglets
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Métriques", new MetricsPanel());
-        tabbedPane.addTab("Graphe d'appel", new GraphPanel());
+
+        metricsPanel = new MetricsPanel();
+        callGraphPanel = new GraphPanel();
+        moduleGraphPanel = new ModuleGraphPanel();
+
+        tabbedPane.addTab("Métriques", metricsPanel);
+        tabbedPane.addTab("Graphe d'appel", callGraphPanel);
+        tabbedPane.addTab("Modules couplés", moduleGraphPanel);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+        // Lien entre MetricsPanel et les autres pour accéder au modèle et aux graphes
+        metricsPanel.setGraphPanels(callGraphPanel, moduleGraphPanel);
     }
 }

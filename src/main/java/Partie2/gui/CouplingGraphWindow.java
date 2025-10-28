@@ -4,12 +4,19 @@ import Partie2.processors.CouplingProcessor;
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
+import org.graphstream.ui.geom.Point2;
+import org.graphstream.ui.geom.Point3;
 import org.graphstream.ui.layout.Layout;
 import org.graphstream.ui.layout.springbox.implementations.SpringBox;
+import org.graphstream.ui.view.camera.Camera;
+import org.graphstream.ui.view.View;
 import org.graphstream.ui.view.Viewer;
 import spoon.reflect.CtModel;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -60,7 +67,7 @@ public class CouplingGraphWindow {
             }
         }
 
-        // --- Étape 2 : Créer les nœuds avec nom complet uniquement pour les doublons ---
+        // --- Étape 2 : Créer les nœuds ---
         for (String key : coupling.keySet()) {
             String[] classes = key.split("↔");
             for (String clsFull : classes) {
@@ -68,12 +75,11 @@ public class CouplingGraphWindow {
                 boolean isDuplicate = simpleNameToFullNames.get(simple).size() > 1;
 
                 String label = isDuplicate
-                        ? simple + "\\n(" + getPackageName(clsFull) + ")"
+                        ? simple + "\n(" + getPackageName(clsFull) + ")"
                         : simple;
 
                 if (graph.getNode(clsFull) == null) {
                     graph.addNode(clsFull).setAttribute("ui.label", label);
-                    // Augmenter la "masse" pour mieux espacer les nœuds
                     graph.getNode(clsFull).setAttribute("layout.mass", 2.0);
                 }
             }
@@ -93,18 +99,42 @@ public class CouplingGraphWindow {
             }
         }
 
-        // --- Étape 4 : Affichage du graphe ---
-        Viewer viewer = graph.display();
+        // --- Étape 4 : Créer le viewer à partir du graph ---
+        Viewer viewer = graph.display(false);
+        viewer.enableAutoLayout();
         viewer.setCloseFramePolicy(Viewer.CloseFramePolicy.HIDE_ONLY);
+
+        // Récupération de la vue principale
+        View view = viewer.getDefaultView();
+        Camera cam = view.getCamera();
+        cam.setViewPercent(1);
+
+        // --- Ajout du zoom à la molette ---
+        ((Component) view).addMouseWheelListener(new MouseWheelListener() {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e) {
+                e.consume();
+                int i = e.getWheelRotation();
+                double factor = Math.pow(1.25, i);
+                double zoom = cam.getViewPercent() * factor;
+
+                Point2 pxCenter = cam.transformGuToPx(cam.getViewCenter().x, cam.getViewCenter().y, 0);
+                Point3 guClicked = cam.transformPxToGu(e.getX(), e.getY());
+                double newRatioPx2Gu = cam.getMetrics().ratioPx2Gu / factor;
+                double x = guClicked.x + (pxCenter.x - e.getX()) / newRatioPx2Gu;
+                double y = guClicked.y - (pxCenter.y - e.getY()) / newRatioPx2Gu;
+                cam.setViewCenter(x, y, 0);
+                cam.setViewPercent(zoom);
+            }
+        });
 
         // --- Étape 5 : Appliquer le layout SpringBox ---
         Layout layout = new SpringBox(false); // false = 2D
         graph.addSink(layout);
         layout.addAttributeSink(graph);
 
-        // Configurer forces pour espacer les nœuds
         layout.setStabilizationLimit(0.4);
-        layout.setForce(4.0); // augmente l'espacement général
+        layout.setForce(4.0);
     }
 
     /** Retourne uniquement le nom du package d’une classe fully qualified. */
